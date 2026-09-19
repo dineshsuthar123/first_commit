@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:17.6-bookworm
+    environment:
+      POSTGRES_DB: stateproof
+      POSTGRES_USER: stateproof
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-stateproof-only}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stateproof -d stateproof"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - postgres:/var/lib/postgresql/data
+  control:
+    build: .
+    init: true
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: stateproof
+      PGPASSWORD: ${POSTGRES_PASSWORD:-local-stateproof-only}
+      PGDATABASE: stateproof
+      STATEPROOF_DATA: /app/data
+      STATEPROOF_READ_ONLY: ${STATEPROOF_READ_ONLY:-0}
+      STATEPROOF_TOKEN: ${STATEPROOF_TOKEN:-}
+      EVIDENCE_BUCKET: ${EVIDENCE_BUCKET:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-ap-south-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - evidence:/app/data
+    stop_grace_period: 20s
+volumes:
+  postgres:
+  evidence:

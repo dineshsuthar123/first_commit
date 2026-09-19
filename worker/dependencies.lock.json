@@ -1,0 +1,12 @@
+[
+  {
+    "file": "postgresql-42.7.7.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/postgresql/postgresql/42.7.7/postgresql-42.7.7.jar",
+    "sha256": "157963d60ae66d607e09466e8c0cdf8087e9cb20d0159899ffca96bca2528460"
+  },
+  {
+    "file": "gson-2.13.1.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.1/gson-2.13.1.jar",
+    "sha256": "94855942d4992f112946d3de1c334e709237b8126d8130bf07807c018a4a2120"
+  }
+]
