@@ -114,11 +114,13 @@ async def run_case(plan: CasePlan, cancel=None, fixture=None):
                 return r.json()
 
             known_effects = set()
+            delivered = set()
             operations = {o.operationId: o for o in plan.operations}
             for action in plan.actions:
                 check_cancel()
                 worker = await launch(fixture.worker_command(), env=fixture.worker_env(schema, url))
                 event("delivery", operationId=action.operationId, attempt=action.attempt, pid=worker.pid)
+                delivered.add(action.operationId)
                 message = {"operation": operations[action.operationId].model_dump(), "variant": plan.variant,
                            "attempt": action.attempt, "attemptId": f"{world_id}:{action.operationId}:{action.attempt}"}
                 worker.stdin.write((json.dumps(message) + "\n").encode())
@@ -164,10 +166,9 @@ async def run_case(plan: CasePlan, cancel=None, fixture=None):
                 if duplicates:
                     event("earliest_duplicate_observation", operationIds=duplicates, ledger=captures)
                     break
-            admitted = {a.operationId for a in plan.actions}
             observation = await asyncio.to_thread(fixture.observe, schema, await ledger())
             result["observation"] = observation.model_dump()
-            result["properties"] = [p.model_dump() for p in evaluate([o for o in plan.operations if o.operationId in admitted], observation)]
+            result["properties"] = [p.model_dump() for p in evaluate([o for o in plan.operations if o.operationId in delivered], observation)]
             result["verdict"] = Verdict.VIOLATION if any(not p["passed"] for p in result["properties"]) else Verdict.PASS
     except BoundaryMissing as e:
         result["verdict"] = Verdict.DIVERGED

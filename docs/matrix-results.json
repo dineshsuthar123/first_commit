@@ -1,0 +1,73 @@
+{
+  "runtime": "Docker Compose: Corretto 21.0.8, Python 3.13.7, PostgreSQL 17.6",
+  "pytest": "8 passed in 63.60s",
+  "campaigns": [
+    {
+      "variant": "local_dedup",
+      "counts": {
+        "PASS_WITHIN_BOUNDS": 7,
+        "PROPERTY_VIOLATION": 2
+      },
+      "executed": 9,
+      "checkpoints": [
+        "before_local_read",
+        "after_local_read",
+        "before_external_call",
+        "after_external_call",
+        "after_local_commit",
+        "before_ack"
+      ],
+      "campaignId": "a928d291683d4c73a20655ee9dc89759"
+    },
+    {
+      "variant": "mark_before",
+      "counts": {
+        "PASS_WITHIN_BOUNDS": 6,
+        "PROPERTY_VIOLATION": 3
+      },
+      "executed": 9,
+      "checkpoints": [
+        "before_local_read",
+        "after_local_read",
+        "after_local_commit",
+        "before_external_call",
+        "after_external_call",
+        "before_ack"
+      ],
+      "campaignId": "cd497d05dc8446349ccbc28b835a83fe"
+    },
+    {
+      "variant": "per_attempt_key",
+      "counts": {
+        "PASS_WITHIN_BOUNDS": 7,
+        "PROPERTY_VIOLATION": 2
+      },
+      "executed": 9,
+      "checkpoints": [
+        "before_local_read",
+        "after_local_read",
+        "before_external_call",
+        "after_external_call",
+        "after_local_commit",
+        "before_ack"
+      ],
+      "campaignId": "5945a663d0e64c85a8b17b06dd2baef4"
+    },
+    {
+      "variant": "stable_key",
+      "counts": {
+        "PASS_WITHIN_BOUNDS": 8
+      },
+      "executed": 8,
+      "checkpoints": [
+        "before_local_read",
+        "after_local_read",
+        "before_external_call",
+        "after_external_call",
+        "after_local_commit",
+        "before_ack"
+      ],
+      "campaignId": "a4fe014c50824daeb53dc8847dcb2da6"
+    }
+  ]
+}

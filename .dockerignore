@@ -1,0 +1,15 @@
+.git
+.venv
+.tools
+.docker
+data
+node_modules
+frontend/node_modules
+frontend/dist
+worker/lib
+worker/build
+**/__pycache__
+.pytest_cache
+.env
+infra/.terraform
+*.tfstate*
