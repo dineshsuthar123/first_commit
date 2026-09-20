@@ -1,6 +1,8 @@
 # 173-second recording script
 
-No narrated submission video has been recorded or uploaded. Automated Chromium captured real screenshots and checked the complete workflow. Use this shot list with an available screen recorder and human voiceover. Cloud shots are conditional on actual authorized deployment.
+A **172.28-second silent recording with captions** is available at [demo.webm](demo.webm). It captures real local exploration, ledger evidence, reduction, replay, repair comparison and an evidence download. It explicitly labels EC2/S3 as not deployed. No cloud execution is implied. Human voiceover and public/unlisted video upload remain optional submission preparation; nothing has been uploaded.
+
+Reproduce the recording from `frontend/`, with Compose running and Chromium installed: `node scripts/record-demo.mjs`. Verify duration and sample playback with `node scripts/verify-video.mjs`. The following 173-second narration/shot schedule drove the capture; video startup accounts for the slight encoded-duration difference.
 
 Before recording: `docker compose up --build -d --wait`; open localhost:8000 at 1440×1000. Keep a terminal showing `docker compose exec -T control java -version` and the validation report. Start from the empty console. If shortening execution waits, label the cut and retain the campaign ID; never splice unlabelled results from different runs.
 

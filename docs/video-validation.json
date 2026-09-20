@@ -1,0 +1,11 @@
+{
+  "durationSeconds": 172.28,
+  "sampledPlaybackSeconds": [
+    45,
+    100,
+    160
+  ],
+  "mediaError": null,
+  "audio": "none; captioned real local execution",
+  "cloud": "explicitly labelled not deployed"
+}

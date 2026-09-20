@@ -13,3 +13,4 @@ worker/build
 .env
 infra/.terraform
 *.tfstate*
+docs/demo.webm

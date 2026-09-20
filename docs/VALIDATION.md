@@ -23,10 +23,13 @@ Recorded September 19–20, 2026. Results below are executions of this implement
 | Final complete packaged suite | **15 passed**, 136.65s; one upstream Starlette/AnyIO deprecation warning |
 | Final saved failure | **30/30 matched**, zero divergences |
 | Same fault plan, stable key | **30/30 passed**, zero errors/inconclusive results |
-| Final browser suite | **2 passed**, 35.2s; Chromium 145.0.7632.6 / Playwright 1.58.2 |
+| Final browser suite | **2 passed**, 37.5s; Chromium 145.0.7632.6 / Playwright 1.58.2 |
+| Clean checkout / fresh Compose volumes | 3 failure, reduction and replay tests passed in 31.15s; latest committed example replay matched the exact build |
 | Frontend production build | TypeScript check and Vite 6.4.3 build passed |
 | Frontend dependency audit after patch | 0 reported vulnerabilities at install time |
 | CloudFormation static lint | cfn-lint 1.40.4, exit 0 |
+| Standalone evidence verifier | Example and browser-downloaded bundles each independently re-evaluated 12 worlds; checksums and SQLite rows matched |
+| Demo capture | 172.28-second captioned recording of actual local workflow; downloaded demo evidence also independently verified (12 worlds) |
 | AWS execution / S3 transfer | **Not run; authorization/account configuration unavailable** |
 
 Commands actually used (the local `.docker` config directory avoids inaccessible host Docker configuration; normal users can omit it):
@@ -39,6 +42,7 @@ docker --config .docker compose exec -T control python -m scripts.validate_repla
 docker --config .docker compose exec -T control java -version
 # From frontend/, after pinned npm install and Chromium installation:
 npx playwright test
+python -m scripts.verify_evidence examples/evidence.zip
 ```
 
 The final Python tests exercise real JVM failure/persistence, all four variants, independent properties, key conflict handling, changed operation/amount, missing boundaries, unavailable database, unexpected exit, cancellation, deadline timeout, replay corruption/build mismatch, deletion reduction, evidence checksums and opening standalone exported SQLite databases. A test compiles an intentionally broken `stable_key` implementation whose key varies by attempt: the evaluator discovers the duplicate even though its variant label remains `stable_key`.
@@ -56,7 +60,9 @@ Each campaign runs two controls plus six observed crash sites. Failing implement
 | mark_before | 9 | 6 | 3 | 0 |
 | stable_key | 8 | 8 | 0 | 0 |
 
-These are counts of executed cases, not percentages of a distributed state space. Both normal controls passed for every variant. The initial recorded matrix is in [matrix-results.json](matrix-results.json); the final full suite reran and checked this behavior. Fault site selection came from each normal trace. mark_before's local commit appears earlier in its discovered ordering.
+These are counts of executed cases, not percentages of a distributed state space. Both normal controls passed for every variant. Final matrix identifiers/builds are in [matrix-results.json](matrix-results.json). Fault site selection came from each normal trace. mark_before's local commit appears earlier in its discovered ordering.
+
+A separate Git clone under `data/clean-checkout` built with `docker compose -p stateproof-cleanverify -f data/clean-checkout/compose.yaml build control`. Fresh PostgreSQL/evidence volumes ran `python -m pytest tests/test_slice.py tests/test_replay.py -q` (3 passed), then `python -m engine.cli replay examples/replay.json` matched. The latest source at commit `9d34122` was also rebuilt and its example replay matched source/actual digest `9c034692…fd7eb0`. Disposable verification containers/volumes were removed afterward; the main local console remains running.
 
 The measured mixed workload has four actions (unrelated delivery + ordinary duplicate, target crash delivery + retry). Reduction produced two actions and reran all admissible single deletions; no remaining admissible deletion preserved the target property's violation for that logical operation. This is grammar-relative 1-minimality.
 
@@ -74,6 +80,6 @@ The measured mixed workload has four actions (unrelated delivery + ordinary dupl
 
 CloudFormation lint and source review are not an AWS deployment. Approved account, region, budget and permission to provision are absent, so EC2 bootstrap, instance-role credential retrieval, live S3 conditional upload and a public URL remain unverified. Follow [infra/README.md](../infra/README.md) after approval.
 
-No narrated 173-second video, YouTube upload or public repository push was performed. The [precise shot list](DEMO.md) is ready. The official submission form exposed only a loading state to the available web reader; no exact cutoff time was verified.
+No YouTube upload or public repository push was performed. The [precise shot list](DEMO.md) is ready; recording status is documented there. The official submission form exposed only a loading state to the available web reader; no exact cutoff time was verified.
 
 Only one payment fixture and one bounded execution grammar are validated. No SQS, network-response suppression, concurrency, production repositories, unknown-bug discovery, global minimality or full-machine determinism claims are made.

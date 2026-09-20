@@ -2,8 +2,8 @@
   "browser": "Playwright 1.58.2 Chromium 145.0.7632.6",
   "target": "http://127.0.0.1:8000; built Compose assets",
   "stats": {
-    "startTime": "2026-09-20T07:18:35.108Z",
-    "duration": 35174.455,
+    "startTime": "2026-09-20T07:30:01.702Z",
+    "duration": 37509.945,
     "expected": 2,
     "skipped": 0,
     "unexpected": 0,
@@ -16,7 +16,7 @@
       "results": [
         {
           "status": "passed",
-          "durationMs": 31681
+          "durationMs": 34297
         }
       ]
     },
@@ -26,7 +26,7 @@
       "results": [
         {
           "status": "passed",
-          "durationMs": 1708
+          "durationMs": 1785
         }
       ]
     }

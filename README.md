@@ -34,6 +34,8 @@ docker compose exec -T control python -m engine.cli replay data/replay.json
 docker compose exec -T control python -m engine.cli replay data/replay.json --compare stable_key
 docker compose exec -T control python -m engine.cli export CAMPAIGN_ID
 docker compose cp control:/app/data/exports ./exported-evidence
+# With local Python dependencies installed: verify the recorded ZIP without workers/databases.
+python -m scripts.verify_evidence examples/evidence.zip
 ```
 
 Campaign exit codes: **0** evaluated passes; **1** violations; **2** harness/inconclusive errors. A same-build replay exits **0** if it matches the saved failure, while still reporting `PROPERTY_VIOLATION`; explicit repair comparison must evaluate as passing to exit 0. Divergence/operational failure exits 2.
@@ -93,7 +95,7 @@ Browser disconnects leave a bounded server job running; polling can resume and c
 
 The same Compose stack has EC2 provisioning, deployment, health and teardown scripts with a private S3 bucket and instance-role upload. **Cloud execution and real S3 transfer are blocked pending approved account/region/budget and authorization. No deployed URL is claimed.** See [infra instructions and cost estimate](infra/README.md). Amazon Corretto is the AWS open-source runtime actually used locally.
 
-[Architecture](docs/ARCHITECTURE.md) · [173-second demo shot list](docs/DEMO.md) · [attribution / AI disclosure](docs/ATTRIBUTION.md).
+[Architecture](docs/ARCHITECTURE.md) · [2:52 captioned demo recording](docs/demo.webm) · [173-second narration / shot list](docs/DEMO.md) · [attribution / AI disclosure](docs/ATTRIBUTION.md).
 
 The [event](https://www.wemakedevs.org/aws/first-commit), [rules](https://www.wemakedevs.org/aws/rules), [submission form](https://www.wemakedevs.org/aws/first-commit/submit) and [schedule](https://www.wemakedevs.org/aws/first-commit/schedule) were checked September 19–20, 2026. The form exposed only a loading state to the available reader. The schedule lists September 20 for submissions but says exact hours are still being finalized. **Exact cutoff time is unverified; check the signed-in form.** No push, video upload, public publishing or submission was performed.
 
