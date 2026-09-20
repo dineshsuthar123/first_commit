@@ -9,6 +9,7 @@ worker/build/
 worker/lib/
 data/
 .env
+*.tsbuildinfo
 .docker/
 infra/.terraform/
 *.tfstate*
