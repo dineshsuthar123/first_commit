@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "payment-v1",
+  "buildDigest": "a622fa7128447d181d242d086f2e80427563c0d7f242c178983fbb1d1e5dec8f",
+  "properties": {
+    "no_duplicate_effect": 1,
+    "correct_completion": 1,
+    "bounded_progress": 1
+  },
+  "bounds": {
+    "consumers": 1,
+    "providers": 1,
+    "maxCrashes": 1,
+    "maxAttempts": 2,
+    "attemptTimeoutSeconds": 15,
+    "maxOperations": 4,
+    "maxActions": 8
+  },
+  "plan": {
+    "variant": "local_dedup",
+    "operations": [
+      {
+        "operationId": "capture-001",
+        "orderId": "order-001",
+        "amountMinor": 100000,
+        "currency": "INR"
+      }
+    ],
+    "actions": [
+      {
+        "operationId": "capture-001",
+        "attempt": 1,
+        "fault": {
+          "operationId": "capture-001",
+          "checkpoint": "after_external_call",
+          "attempt": 1,
+          "occurrence": 1,
+          "decision": "kill"
+        }
+      },
+      {
+        "operationId": "capture-001",
+        "attempt": 2,
+        "fault": null
+      }
+    ]
+  },
+  "inputs": {
+    "clock": "unused by business logic",
+    "randomness": "unique world namespace; attemptId=world:operation:attempt"
+  },
+  "expectedSignature": {
+    "property": "no_duplicate_effect",
+    "version": 1,
+    "operationId": "capture-001"
+  },
+  "expectedVerdict": "PROPERTY_VIOLATION",
+  "expectedTrace": [
+    {
+      "seq": 0,
+      "type": "provider_started"
+    },
+    {
+      "seq": 1,
+      "type": "delivery",
+      "operationId": "capture-001",
+      "attempt": 1
+    },
+    {
+      "seq": 2,
+      "type": "checkpoint",
+      "checkpoint": "before_local_read",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 1
+    },
+    {
+      "seq": 3,
+      "type": "checkpoint",
+      "checkpoint": "after_local_read",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 1
+    },
+    {
+      "seq": 4,
+      "type": "checkpoint",
+      "checkpoint": "before_external_call",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 1
+    },
+    {
+      "seq": 5,
+      "type": "provider_response",
+      "effectId": 1,
+      "deduplicated": false,
+      "operationId": "capture-001",
+      "attempt": 1
+    },
+    {
+      "seq": 6,
+      "type": "checkpoint",
+      "checkpoint": "after_external_call",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 1
+    },
+    {
+      "seq": 7,
+      "type": "effect_committed",
+      "effectId": 1,
+      "operationId": "capture-001",
+      "orderId": "order-001",
+      "amountMinor": 100000,
+      "currency": "INR",
+      "idempotencyKey": null
+    },
+    {
+      "seq": 8,
+      "type": "worker_terminated",
+      "returncode": "confirmed_termination",
+      "boundary": {
+        "operationId": "capture-001",
+        "checkpoint": "after_external_call",
+        "attempt": 1,
+        "occurrence": 1,
+        "decision": "kill"
+      },
+      "survivingLedger": [
+        {
+          "effectId": 1,
+          "operationId": "capture-001",
+          "orderId": "order-001",
+          "amountMinor": 100000,
+          "currency": "INR",
+          "idempotencyKey": null
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "type": "delivery",
+      "operationId": "capture-001",
+      "attempt": 2
+    },
+    {
+      "seq": 10,
+      "type": "checkpoint",
+      "checkpoint": "before_local_read",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 2
+    },
+    {
+      "seq": 11,
+      "type": "checkpoint",
+      "checkpoint": "after_local_read",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 2
+    },
+    {
+      "seq": 12,
+      "type": "checkpoint",
+      "checkpoint": "before_external_call",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 2
+    },
+    {
+      "seq": 13,
+      "type": "provider_response",
+      "effectId": 2,
+      "deduplicated": false,
+      "operationId": "capture-001",
+      "attempt": 2
+    },
+    {
+      "seq": 14,
+      "type": "checkpoint",
+      "checkpoint": "after_external_call",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 2
+    },
+    {
+      "seq": 15,
+      "type": "effect_committed",
+      "effectId": 2,
+      "operationId": "capture-001",
+      "orderId": "order-001",
+      "amountMinor": 100000,
+      "currency": "INR",
+      "idempotencyKey": null
+    },
+    {
+      "seq": 16,
+      "type": "checkpoint",
+      "checkpoint": "after_local_commit",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 2
+    },
+    {
+      "seq": 17,
+      "type": "checkpoint",
+      "checkpoint": "before_ack",
+      "occurrence": 1,
+      "operationId": "capture-001",
+      "attempt": 2
+    },
+    {
+      "seq": 18,
+      "type": "ack",
+      "operationId": "capture-001",
+      "attempt": 2
+    },
+    {
+      "seq": 19,
+      "type": "earliest_duplicate_observation",
+      "operationIds": [
+        "capture-001"
+      ],
+      "ledger": [
+        {
+          "effectId": 1,
+          "operationId": "capture-001",
+          "orderId": "order-001",
+          "amountMinor": 100000,
+          "currency": "INR",
+          "idempotencyKey": null
+        },
+        {
+          "effectId": 2,
+          "operationId": "capture-001",
+          "orderId": "order-001",
+          "amountMinor": 100000,
+          "currency": "INR",
+          "idempotencyKey": null
+        }
+      ]
+    }
+  ],
+  "externalOutcomes": [
+    {
+      "effectId": 1,
+      "operationId": "capture-001",
+      "orderId": "order-001",
+      "amountMinor": 100000,
+      "currency": "INR",
+      "idempotencyKey": null
+    },
+    {
+      "effectId": 2,
+      "operationId": "capture-001",
+      "orderId": "order-001",
+      "amountMinor": 100000,
+      "currency": "INR",
+      "idempotencyKey": null
+    }
+  ],
+  "checksum": "693217ff08cc8f16b5291c07c24bb7750c46fc1da1de76020fced484abc341d4"
+}

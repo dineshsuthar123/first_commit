@@ -47,6 +47,7 @@ async def stop(process):
 
 
 async def run_case(plan: CasePlan, cancel=None, fixture=None):
+    from engine.evidence import build_digest
     fixture = fixture or PaymentFixture()
     world_id = uuid.uuid4().hex
     schema = "sp_" + world_id
@@ -54,6 +55,7 @@ async def run_case(plan: CasePlan, cancel=None, fixture=None):
     directory.mkdir(parents=True)
     result = {"worldId": world_id, "plan": plan.model_dump(), "verdict": None,
               "events": [], "properties": [], "observation": None, "diagnostics": [], "lifecycle": "RUNNING"}
+    result["buildDigest"] = build_digest()
     processes = []
     drains = []
     logs = []
