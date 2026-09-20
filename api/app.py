@@ -35,11 +35,16 @@ async def lifespan(app):
     global active
     active = None
     # A supervisor restart must not leave stale RUNNING jobs presented as live work.
+    interruption = "control service restarted before completion"
     for folder in ("jobs", "campaigns"):
         for path in (data_root() / folder).glob("*.json"):
             item = json.loads(path.read_text())
             if item.get("lifecycle") == "RUNNING":
-                item.update(lifecycle="INTERRUPTED", error="control service restarted before completion")
+                item["lifecycle"] = "INTERRUPTED"
+                if folder == "jobs":
+                    item["error"] = interruption
+                else:
+                    item.setdefault("diagnostics", []).append(interruption)
                 write_json(path, item)
     yield
     for flag in cancel_flags.values():
@@ -83,7 +88,17 @@ def job_path(identifier):
     return data_root() / "jobs" / campaign_path(identifier).name
 
 
-def start_job(kind, work, identifier=None):
+def _mark_campaign_terminal(identifier, lifecycle, error):
+    try:
+        saved = load_campaign(identifier)
+    except (OSError, ValueError):
+        return
+    saved["lifecycle"] = lifecycle
+    saved.setdefault("diagnostics", []).append(error)
+    write_json(campaign_path(identifier), saved)
+
+
+def start_job(kind, work, identifier=None, *, campaign_id=None, source_case=None, source_case_label=None):
     global active
     if active:
         raise HTTPException(409, "Another job is active. Wait or cancel it first.")
@@ -93,7 +108,9 @@ def start_job(kind, work, identifier=None):
     flag = Event()
     cancel_flags[identifier] = flag
     active = identifier
-    initial = {"id": identifier, "kind": kind, "lifecycle": "RUNNING", "result": None}
+    initial = {"id": identifier, "kind": kind, "lifecycle": "RUNNING", "result": None,
+               "campaignId": campaign_id, "sourceCaseId": source_case and source_case["worldId"],
+               "sourceCaseLabel": source_case_label or (source_case and source_case.get("label", "case"))}
     write_json(job_path(identifier), initial)
 
     async def execute():
@@ -101,9 +118,18 @@ def start_job(kind, work, identifier=None):
         job = dict(initial)
         try:
             job["result"] = await work(flag)
-            job["lifecycle"] = "CANCELLED" if flag.is_set() else "FINISHED"
+            result_lifecycle = job["result"].get("lifecycle") if isinstance(job["result"], dict) else None
+            job["lifecycle"] = result_lifecycle if result_lifecycle in ("CANCELLED", "INTERRUPTED", "FAILED") else ("CANCELLED" if flag.is_set() else "FINISHED")
+        except asyncio.CancelledError:
+            job.update(lifecycle="INTERRUPTED", error="control service interrupted the active job")
+            if kind == "campaign" and campaign_id:
+                _mark_campaign_terminal(campaign_id, "INTERRUPTED", job["error"])
+            raise
         except Exception as e:
-            job.update(lifecycle="FAILED", error=f"{type(e).__name__}: {e}")
+            terminal = "CANCELLED" if flag.is_set() else "FAILED"
+            job.update(lifecycle=terminal, error=f"{type(e).__name__}: {e}")
+            if kind == "campaign" and campaign_id:
+                _mark_campaign_terminal(campaign_id, terminal, job["error"])
         finally:
             write_json(job_path(identifier), job)
             cancel_flags.pop(identifier, None)
@@ -120,7 +146,8 @@ class CampaignRequest(Strict):
 
 
 class ReplayRequest(Strict):
-    campaignId: str | None = None
+    campaignId: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
+    caseId: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
     manifest: ReplayManifest | None = None
     comparisonVariant: Variant | None = None
 
@@ -128,6 +155,8 @@ class ReplayRequest(Strict):
     def one_source(self):
         if (self.campaignId is None) == (self.manifest is None):
             raise ValueError("provide exactly one of campaignId or manifest")
+        if self.manifest is not None and self.caseId is not None:
+            raise ValueError("caseId is valid only with campaignId")
         return self
 
 
@@ -157,7 +186,8 @@ def campaigns():
 @app.post("/api/campaigns", status_code=202)
 async def create_campaign(body: CampaignRequest):
     identifier = uuid.uuid4().hex
-    return start_job("campaign", lambda flag: explore(body.variant, body.operation, flag, identifier), identifier)
+    return start_job("campaign", lambda flag: explore(body.variant, body.operation, flag, identifier), identifier,
+                     campaign_id=identifier)
 
 
 @app.get("/api/campaigns/{identifier}")
@@ -183,25 +213,41 @@ async def reduce_campaign(identifier: str):
         saved["reduction"] = await reduce_case(case, flag)
         write_json(campaign_path(identifier), saved)
         return saved["reduction"]
-    return start_job("reduce", work)
+    return start_job("reduce", work, campaign_id=identifier, source_case=case)
 
 
 @app.post("/api/replays", status_code=202)
 async def create_replay(body: ReplayRequest):
     if body.manifest:
         manifest = body.manifest.model_dump()
+        source_case = None
+        source_label = None
     else:
         saved = campaign(body.campaignId)
-        case = failure_case(saved) or next((c for c in saved["cases"] if c["verdict"] == "PASS_WITHIN_BOUNDS"), None)
-        if not case:
+        candidates = list(saved["cases"])
+        if saved.get("reduction"):
+            candidates.append(saved["reduction"]["case"])
+        if body.caseId:
+            source_case = next((case for case in candidates if case["worldId"] == body.caseId), None)
+            if source_case is None:
+                raise HTTPException(422, "caseId does not belong to the campaign")
+        else:
+            # Compatibility default for API/CLI callers. The browser always sends caseId.
+            source_case = failure_case(saved) or next((c for c in saved["cases"] if c["verdict"] == "PASS_WITHIN_BOUNDS"), None)
+        if not source_case:
             raise HTTPException(409, "No evaluated case to replay")
-        manifest = manifest_for(case)
+        manifest = manifest_for(source_case)
+        reduced = saved.get("reduction", {}).get("case")
+        source_label = ("reduced failure · " + source_case.get("label", "case")
+                        if reduced and reduced["worldId"] == source_case["worldId"] else source_case.get("label", "case"))
     from engine.evidence import validate_manifest
     try:
         validate_manifest(manifest)
     except ValueError as e:
         raise HTTPException(422, str(e))
-    return start_job("comparison" if body.comparisonVariant else "replay", lambda flag: replay(manifest, body.comparisonVariant, flag))
+    return start_job("comparison" if body.comparisonVariant else "replay",
+                     lambda flag: replay(manifest, body.comparisonVariant, flag),
+                     campaign_id=body.campaignId, source_case=source_case, source_case_label=source_label)
 
 
 @app.get("/api/campaigns/{identifier}/evidence")
@@ -220,7 +266,7 @@ async def upload(identifier: str):
     saved = campaign(identifier)
     async def work(flag):
         return await asyncio.to_thread(upload_bundle, export_bundle(saved), identifier)
-    return start_job("upload", work)
+    return start_job("upload", work, campaign_id=identifier)
 
 
 @app.get("/api/jobs/{identifier}")

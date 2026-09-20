@@ -16,7 +16,7 @@ Install Docker with Linux containers and Compose. The commands work in Linux, WS
 docker compose up --build -d --wait
 ```
 
-Open **http://127.0.0.1:8000**. Select `local_dedup`, then **Run exploration → Reduce workload → Replay case → Compare stable key → Download evidence**. The initial screen is empty. History entries are labelled saved campaigns. First build requires internet; execution thereafter uses local dependencies.
+Open **http://127.0.0.1:8000**. Select `local_dedup`, then **Run exploration → Reduce workload → Replay selected case → Compare selected with stable key → Download evidence**. The initial Retry lab is empty. **Evidence explorer** is a separate sidebar view with campaign history and a useful empty state; its `#evidence` URL supports direct links and browser history. Selecting a campaign or switching views preserves the selected direct or reduced case. History entries are labelled saved campaigns. First build requires internet; execution thereafter uses local dependencies.
 
 Optional settings: [.env.example](.env.example). The console binds to loopback; PostgreSQL and provider ports are not published. One API job runs at a time. Set `STATEPROOF_TOKEN` to protect mutations or `STATEPROOF_READ_ONLY=1` to disable them. Do not expose a writable console publicly without access control.
 
@@ -38,7 +38,7 @@ docker compose cp control:/app/data/exports ./exported-evidence
 python -m scripts.verify_evidence examples/evidence.zip
 ```
 
-Campaign exit codes: **0** evaluated passes; **1** violations; **2** harness/inconclusive errors. A same-build replay exits **0** if it matches the saved failure, while still reporting `PROPERTY_VIOLATION`; explicit repair comparison must evaluate as passing to exit 0. Divergence/operational failure exits 2.
+Campaign exit codes: **0** only for a finished, nonempty campaign containing evaluated passes; **1** for evaluated violations without operational failures; **2** for `DIVERGED`, harness errors, inconclusive results, incomplete/failed campaigns, empty campaigns, or contradictory totals. A same-build replay exits **0** if it matches the saved failure, while still reporting `PROPERTY_VIOLATION`; explicit repair comparison must evaluate as passing to exit 0. Divergence/operational failure exits 2.
 
 Configuration and validation:
 
@@ -81,13 +81,13 @@ Reduction deletes one action at a time, reruns from scratch, and retains the sam
 
 Manifests pin fixture, engine/fixture/provider source, worker source and compiled artifacts, dependency lockfiles, property versions, initial operations, bounds, ordered actions and semantic boundaries. Boundaries match operation, site, occurrence and attempt. A build mismatch returns `DIVERGED`; explicit `--compare stable_key` evaluates the repair without pretending its full trace should match.
 
-Canonical comparison removes PIDs/ports, replaces the world namespace with `WORLD` in attempt keys, and normalizes confirmed OS termination codes. It preserves ordered events, logical identities, amounts, currency, effects, key relationships, deduplication and fault decisions. Durations/stderr are retained but not trace inputs. Checksums and replay establish this evidence contract, not full-machine determinism. Fixed ZIP metadata timestamps support stable packaging and are not work dates.
+Canonical comparison removes PIDs/ports, replaces the world namespace with `WORLD` in attempt keys and durable provider outcomes, and normalizes confirmed OS termination codes. It preserves ordered events, logical identities, effect IDs, amounts, currency, key relationships, deduplication and fault decisions. Replay manifest schema 2 checks the plan, build, verdict, violation signature, event trace, and canonical durable outcomes; schema 1 is rejected explicitly. Durations/stderr are retained but not trace inputs. Checksums and replay establish this evidence contract, not full-machine determinism. Fixed ZIP metadata timestamps support stable packaging and are not work dates.
 
 ZIP exports include campaign JSON, schema-versioned replay manifest, observations, standalone SQLite ledgers, reduction trials and SHA-256 checksums. [Example manifest](examples/replay.json) and [example bundle](examples/evidence.zip) are **recorded evidence**. Changes to execution artifacts intentionally invalidate same-build replay; generate a fresh campaign or explicitly compare a variant.
 
 ## API and operations
 
-`GET /api/fixtures`, `POST /api/campaigns`, `GET /api/campaigns/{id}`, `GET /api/campaigns/{id}/events?after=CURSOR`, `POST /api/campaigns/{id}/reduce`, `POST /api/replays`, `GET /api/campaigns/{id}/evidence`. Writes return a job ID: poll `/api/jobs/{id}`, cancel through `POST /api/jobs/{id}/cancel`. Typed schemas are at `/docs`.
+`GET /api/fixtures`, `POST /api/campaigns`, `GET /api/campaigns/{id}`, `GET /api/campaigns/{id}/events?after=CURSOR`, `POST /api/campaigns/{id}/reduce`, `POST /api/replays`, `GET /api/campaigns/{id}/evidence`. The browser sends `{campaignId, caseId}` for replay and comparison, and the API rejects a case outside that campaign. For compatibility, an omitted `caseId` selects the reduced failure, then the latest direct violation, then the first passing case. Writes return a job ID with durable campaign/source-case context: poll `/api/jobs/{id}`, cancel through `POST /api/jobs/{id}/cancel`. Typed schemas are at `/docs`.
 
 Browser disconnects leave a bounded server job running; polling can resume and cancellation stops children. Service shutdown requests cancellation. Trusted built-in fixtures only: no arbitrary command, executable, URL, path or repository upload. The API caps retained jobs at 500, campaign listings at 50 and event pages at 512. Export/archive data before storage fills. CLI operators manage their own concurrency. Hard-killing a native host supervisor can require manual child cleanup; Compose teardown removes its process namespace.
 

@@ -2,21 +2,41 @@
   "browser": "Playwright 1.58.2 Chromium 145.0.7632.6",
   "target": "http://127.0.0.1:8000; built Compose assets",
   "stats": {
-    "startTime": "2026-09-20T07:30:01.702Z",
-    "duration": 37509.945,
-    "expected": 2,
+    "startTime": "2026-09-20T13:53:05.833Z",
+    "duration": 41047.725000000006,
+    "expected": 4,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
   },
   "checks": [
     {
-      "name": "real exploration, reduction, replay, repair comparison and evidence download",
+      "name": "real exploration, explicit reduction replay, repair comparison and evidence download",
       "status": "expected",
       "results": [
         {
           "status": "passed",
-          "durationMs": 34297
+          "durationMs": 36845
+        }
+      ]
+    },
+    {
+      "name": "hash navigation supports deep links, empty evidence, back and forward",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 514
+        }
+      ]
+    },
+    {
+      "name": "restored failed derived job shows campaign context and failure",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "durationMs": 474
         }
       ]
     },
@@ -26,7 +46,7 @@
       "results": [
         {
           "status": "passed",
-          "durationMs": 1785
+          "durationMs": 1621
         }
       ]
     }

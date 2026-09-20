@@ -1,6 +1,6 @@
 {
   "runtime": "Docker Compose: Corretto 21.0.8, Python 3.13.7, PostgreSQL 17.6",
-  "pytest": "Final full suite: 15 passed in 136.65s",
+  "pytest": "Review repair full suite: 26 passed in 134.98s",
   "campaigns": [
     {
       "variant": "local_dedup",
@@ -17,8 +17,8 @@
         "after_local_commit",
         "before_ack"
       ],
-      "campaignId": "644954e49f534ccca751ae3a342cea06",
-      "buildDigest": "9c0346924f64cad021088555bb56cc38a08d187a5a1022643c9db7d19cfd7eb0"
+      "campaignId": "c9ce25dbefe4430f8105c6d38d796780",
+      "buildDigest": "863b21915e95a16db8ad783e683fd9f7ba873ffdd061521bef2aa1394a0e4f41"
     },
     {
       "variant": "mark_before",
@@ -35,8 +35,8 @@
         "after_external_call",
         "before_ack"
       ],
-      "campaignId": "9ca96572744846ad9f3c881091ff09cb",
-      "buildDigest": "9c0346924f64cad021088555bb56cc38a08d187a5a1022643c9db7d19cfd7eb0"
+      "campaignId": "a90635d6bdf14b4db32eb2b2f6ee96d7",
+      "buildDigest": "863b21915e95a16db8ad783e683fd9f7ba873ffdd061521bef2aa1394a0e4f41"
     },
     {
       "variant": "per_attempt_key",
@@ -53,8 +53,8 @@
         "after_local_commit",
         "before_ack"
       ],
-      "campaignId": "35a42a6a84e84b67bb391edb96f26372",
-      "buildDigest": "9c0346924f64cad021088555bb56cc38a08d187a5a1022643c9db7d19cfd7eb0"
+      "campaignId": "80d499db85054673b2f565f46a92dce4",
+      "buildDigest": "863b21915e95a16db8ad783e683fd9f7ba873ffdd061521bef2aa1394a0e4f41"
     },
     {
       "variant": "stable_key",
@@ -70,8 +70,8 @@
         "after_local_commit",
         "before_ack"
       ],
-      "campaignId": "b05c515582004dbebae0d1dfb96e6690",
-      "buildDigest": "9c0346924f64cad021088555bb56cc38a08d187a5a1022643c9db7d19cfd7eb0"
+      "campaignId": "4316e724021d45f2a5ac2cbc4cb0ecec",
+      "buildDigest": "863b21915e95a16db8ad783e683fd9f7ba873ffdd061521bef2aa1394a0e4f41"
     }
   ]
 }

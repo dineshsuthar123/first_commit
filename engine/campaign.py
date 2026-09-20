@@ -16,7 +16,7 @@ def signature(case):
 async def explore(variant="local_dedup", operation=None, cancel=None, campaign_id=None, progress=None):
     operation = operation or Operation()
     campaign_id = campaign_id or uuid.uuid4().hex
-    campaign = {"id": campaign_id, "fixtureId": "payment-v1", "variant": variant,
+    campaign = {"schemaVersion": 1, "id": campaign_id, "fixtureId": "payment-v1", "variant": variant,
                 "operation": operation.model_dump(), "bounds": BOUNDS, "lifecycle": "RUNNING",
                 "cases": [], "discoveredCheckpoints": [], "counts": {}, "coverage": {
                     "method": "normal execution checkpoint enumeration",

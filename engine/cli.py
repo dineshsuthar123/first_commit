@@ -28,11 +28,29 @@ def failure_case(campaign):
     return next((c for c in reversed(campaign["cases"]) if c["verdict"] == Verdict.VIOLATION), None)
 
 
+def campaign_exit_code(result):
+    """Classify campaign completion for CI without treating missing work as success."""
+    counts = result.get("counts") or {}
+    executed = result.get("executed")
+    if result.get("lifecycle") != "FINISHED" or not isinstance(executed, int) or executed < 1:
+        return 2
+    known = {verdict.value for verdict in Verdict}
+    if any(name not in known or not isinstance(count, int) or count < 0 for name, count in counts.items()):
+        return 2
+    if sum(counts.values()) != executed:
+        return 2
+    if any(counts.get(verdict, 0) for verdict in (Verdict.DIVERGED, Verdict.ERROR, Verdict.INCONCLUSIVE)):
+        return 2
+    if counts.get(Verdict.VIOLATION, 0):
+        return 1
+    return 0 if counts.get(Verdict.PASS, 0) == executed else 2
+
+
 async def main_async(args):
     if args.command == "campaign":
         result = await explore(args.variant, Operation(operationId=args.operation, amountMinor=args.amount))
         print(json.dumps({"id": result["id"], "counts": result["counts"], "executed": result["executed"]}))
-        return 2 if result["counts"].get(Verdict.ERROR) or result["counts"].get(Verdict.INCONCLUSIVE) else (1 if result["counts"].get(Verdict.VIOLATION) else 0)
+        return campaign_exit_code(result)
     if args.command == "replay":
         result = await replay(json.loads(Path(args.manifest).read_text()), args.compare)
         print(json.dumps(result, indent=2))

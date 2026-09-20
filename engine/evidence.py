@@ -48,8 +48,24 @@ def canonical_trace(case):
     return normalize(case["events"])
 
 
+def canonical_outcomes(case):
+    """Normalize the durable provider outcome without weakening identity checks."""
+    world_id = case["worldId"]
+
+    def normalize(value):
+        if isinstance(value, list):
+            return [normalize(item) for item in value]
+        if isinstance(value, dict):
+            return {key: normalize(item) for key, item in value.items()}
+        if isinstance(value, str):
+            return value.replace(world_id, "WORLD")
+        return value
+
+    return normalize(case["observation"]["ledger"])
+
+
 class ReplayManifest(Strict):
-    schemaVersion: Literal[1] = 1
+    schemaVersion: Literal[2] = 2
     fixtureId: Literal["payment-v1"] = "payment-v1"
     buildDigest: str = Field(pattern=r"^[a-f0-9]{64}$")
     properties: dict[str, int]
@@ -59,23 +75,25 @@ class ReplayManifest(Strict):
     expectedSignature: dict | None
     expectedVerdict: Literal["PASS_WITHIN_BOUNDS", "PROPERTY_VIOLATION"]
     expectedTrace: list[dict] = Field(max_length=512)
-    externalOutcomes: list[dict] = Field(max_length=16)
+    expectedOutcomes: list[dict] = Field(max_length=16)
     checksum: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 def manifest_for(case):
     if case["verdict"] not in (Verdict.PASS, Verdict.VIOLATION):
         raise ValueError("only evaluated cases can define replay expectations")
-    payload = {"schemaVersion": 1, "fixtureId": "payment-v1", "buildDigest": case["buildDigest"],
+    payload = {"schemaVersion": 2, "fixtureId": "payment-v1", "buildDigest": case["buildDigest"],
                "properties": PROPERTIES, "bounds": BOUNDS, "plan": case["plan"],
                "inputs": {"clock": "unused by business logic", "randomness": "unique world namespace; attemptId=world:operation:attempt"},
                "expectedSignature": signature(case), "expectedVerdict": case["verdict"],
-               "expectedTrace": canonical_trace(case), "externalOutcomes": case["observation"]["ledger"]}
+               "expectedTrace": canonical_trace(case), "expectedOutcomes": canonical_outcomes(case)}
     payload["checksum"] = sha(encoded(payload))
     return ReplayManifest.model_validate(payload).model_dump()
 
 
 def validate_manifest(raw):
+    if not isinstance(raw, dict) or raw.get("schemaVersion") != 2:
+        raise ValueError("unsupported replay manifest schemaVersion; expected 2")
     manifest = ReplayManifest.model_validate(raw)
     value = manifest.model_dump()
     checksum = value.pop("checksum")
@@ -99,7 +117,8 @@ async def replay(raw, comparison_variant=None, cancel=None):
     result["actualBuildDigest"] = build_digest()
     if comparison_variant is None:
         matched = (result["verdict"] == manifest.expectedVerdict and signature(result) == manifest.expectedSignature
-                   and canonical_trace(result) == manifest.expectedTrace)
+                   and canonical_trace(result) == manifest.expectedTrace
+                   and canonical_outcomes(result) == manifest.expectedOutcomes)
         result["replayMatched"] = matched
         if not matched:
             result["observedVerdict"] = result["verdict"]

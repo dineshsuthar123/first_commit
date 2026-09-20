@@ -1,53 +1,52 @@
 # Validation report
 
-Recorded September 19–20, 2026. Results below are executions of this implementation, not inherited feasibility results. The seeded fixture establishes only the stated bounded behavior.
+Recorded September 20, 2026 from the repaired working tree. These are new executions of this implementation against isolated storage, not inherited results. The seeded fixture establishes only the stated bounded behavior.
 
 ## Environment and artifact identity
 
-- Host: Windows with Docker Desktop 4.73.1, Engine 29.4.3, Compose 5.1.3, WSL2 Linux containers.
-- Packaged runner: Python 3.13.7; Amazon Corretto **21.0.8.9.1**; PostgreSQL **17.6**; Linux 6.6.87.2-microsoft-standard-WSL2, x86_64, glibc 2.36.
-- Initial native slice: Python 3.14.6, Oracle Java 21.0.9, isolated PostgreSQL 18 on localhost:55432. Main packaged results use Corretto, not Oracle Java.
-- Final execution build SHA-256: `9c0346924f64cad021088555bb56cc38a08d187a5a1022643c9db7d19cfd7eb0`.
-- Recorded example campaign: `3715a9345ee049b59fc0a79d0fe8db22`.
-- Example ZIP SHA-256: `f29075e3a7110d8dcef3a61c19e553bf65ba8aa8195dc7d493bed728532f4319`.
-- Execution build fingerprints include source/compiled worker artifacts and lockfiles, not UI/docs. Container packaging and documentation can change without changing that fingerprint.
+- Host: Windows with Docker Desktop, WSL2 Linux containers.
+- Packaged runner: Python 3.13.7; Amazon Corretto 21.0.8.9.1; PostgreSQL 17.6.
+- Final execution build SHA-256: `863b21915e95a16db8ad783e683fd9f7ba873ffdd061521bef2aa1394a0e4f41`.
+- Recorded example campaign: `97a92b74cf4c46d5ba27e4e491a4e4c7`.
+- Example ZIP SHA-256: `3efe5bdf90c82ec10884696cdafe9520c2180205e3967b3903d65784539d83fc`.
+- Replay manifest schema: 2.
 
 ## Executed checks
 
 | Check | Actual result |
 | --- | --- |
-| Native Milestone 1 integration | 1 passed, 8.13s; four real worlds (normal, duplicate, killed faulty, killed repaired) |
-| First Corretto Compose matrix | 8 integration tests passed, 63.60s |
-| Initial replay/reducer checks | 2 passed, 24.16s |
-| API integration | 2 passed, 24.77s |
-| Final complete packaged suite | **15 passed**, 136.65s; one upstream Starlette/AnyIO deprecation warning |
-| Final saved failure | **30/30 matched**, zero divergences |
-| Same fault plan, stable key | **30/30 passed**, zero errors/inconclusive results |
-| Final browser suite | **2 passed**, 37.5s; Chromium 145.0.7632.6 / Playwright 1.58.2 |
-| Clean checkout / fresh Compose volumes | 3 failure, reduction and replay tests passed in 31.15s; latest committed example replay matched the exact build |
-| Frontend production build | TypeScript check and Vite 6.4.3 build passed |
-| Frontend dependency audit after patch | 0 reported vulnerabilities at install time |
-| CloudFormation static lint | cfn-lint 1.40.4, exit 0 |
-| Standalone evidence verifier | Example and browser-downloaded bundles each independently re-evaluated 12 worlds; checksums and SQLite rows matched |
-| Demo capture | 172.28-second captioned recording of actual local workflow; downloaded demo evidence also independently verified (12 worlds) |
-| AWS execution / S3 transfer | **Not run; authorization/account configuration unavailable** |
+| Clean frontend install | `npm ci`: 72 packages, 0 reported vulnerabilities |
+| Frontend production build | TypeScript and Vite 6.4.3 passed; 28 modules transformed |
+| Full packaged Python suite | **26 passed** in 134.98s; one upstream Starlette/AnyIO deprecation warning |
+| Corretto runtime | OpenJDK 21.0.8, Corretto-21.0.8.9.1 |
+| Chromium browser suite | **4 passed** in 41.0s; Playwright 1.58.2 / Chromium 145.0.7632.6 |
+| Fresh saved-failure replay gate | **30/30 matched**, zero divergences |
+| Fresh stable-key comparison gate | **30/30 passed**, zero operational failures |
+| Standalone evidence verifier | Schema-2 example verified; 12 worlds independently evaluated |
+| Same-build replay | Matched the saved `PROPERTY_VIOLATION` contract |
+| Changed-build probe | Returned `DIVERGED` with `same-build digest mismatch` after adding a temporary engine artifact; the artifact was then removed |
+| AWS execution / S3 transfer | Not run; outside this repair task |
 
-Commands actually used (the local `.docker` config directory avoids inaccessible host Docker configuration; normal users can omit it):
+Commands run:
 
 ```sh
-docker --config .docker compose build control
-docker --config .docker compose up -d control
-docker --config .docker compose exec -T -e STATEPROOF_DATA=/app/data/final-validation control python -m pytest -q
-docker --config .docker compose exec -T control python -m scripts.validate_replays
-docker --config .docker compose exec -T control java -version
-# From frontend/, after pinned npm install and Chromium installation:
+docker compose up --build -d --wait
+docker compose exec -T -e STATEPROOF_DATA=/app/data/review-fix-tests control python -m pytest -q
+docker compose exec -T control java -version
+
+# From frontend/
+npm ci
+npm run build
+npx playwright install chromium
 npx playwright test
+
+docker compose exec -T -e STATEPROOF_DATA=/app/data/review-fix-validation control python -m scripts.validate_replays
 python -m scripts.verify_evidence examples/evidence.zip
 ```
 
-The final Python tests exercise real JVM failure/persistence, all four variants, independent properties, key conflict handling, changed operation/amount, missing boundaries, unavailable database, unexpected exit, cancellation, deadline timeout, replay corruption/build mismatch, deletion reduction, evidence checksums and opening standalone exported SQLite databases. A test compiles an intentionally broken `stable_key` implementation whose key varies by attempt: the evaluator discovers the duplicate even though its variant label remains `stable_key`.
+The Python suite covers real JVM termination and durable persistence, all four variants, exact replay targeting and ownership rejection, job context and campaign failure terminalization, CLI exit policy, canonical durable outcome matching, per-attempt key normalization, deletion reduction, and cross-file evidence consistency. Controlled archive mutations confirm that contradictory campaign copies/counts, missing world records, checksums-only bundles, and contradictory manifest outcomes fail verification. A coherent operational-only bundle reports `businessEvaluation: not_evaluated`.
 
-Browser checks exercise actual backend exploration, ₹2,000 ledger display, four-to-two reduction, replay match, ₹1,000 repair comparison and downloading a ZIP, plus connection failure/recovery, cancellation and a 390px viewport with no horizontal overflow. There were no browser page errors. The in-app browser reported no available connection; a separate automated Chromium instance performed these checks. [Machine-readable browser results](browser-validation.json) and [actual screenshot](console.png) are retained.
+The browser suite retains the real end-to-end exploration/reduction/replay/comparison/download test. It also exercises hash deep links and Back/Forward navigation, explicit reduced-case request bodies, reload recovery through durable job context, a controlled failed-job rendering path, connection recovery, cancellation, and a 390px viewport. [Machine-readable browser results](browser-validation.json) and the [current screenshot](console.png) are retained.
 
 ## Matrix counts
 
@@ -55,31 +54,15 @@ Each campaign runs two controls plus six observed crash sites. Failing implement
 
 | Variant | Executed | Pass | Violation | Inconclusive/error/diverged |
 | --- | ---: | ---: | ---: | ---: |
-| local_dedup | 9 | 7 | 2 | 0 |
-| per_attempt_key | 9 | 7 | 2 | 0 |
-| mark_before | 9 | 6 | 3 | 0 |
-| stable_key | 8 | 8 | 0 | 0 |
+| `local_dedup` | 9 | 7 | 2 | 0 |
+| `per_attempt_key` | 9 | 7 | 2 | 0 |
+| `mark_before` | 9 | 6 | 3 | 0 |
+| `stable_key` | 8 | 8 | 0 | 0 |
 
-These are counts of executed cases, not percentages of a distributed state space. Both normal controls passed for every variant. Final matrix identifiers/builds are in [matrix-results.json](matrix-results.json). Fault site selection came from each normal trace. mark_before's local commit appears earlier in its discovered ordering.
+These are executed cases, not percentages of a distributed state space. Both normal controls passed for every variant. Fresh campaign IDs and build fingerprints are in [matrix-results.json](matrix-results.json).
 
-A separate Git clone under `data/clean-checkout` built with `docker compose -p stateproof-cleanverify -f data/clean-checkout/compose.yaml build control`. Fresh PostgreSQL/evidence volumes ran `python -m pytest tests/test_slice.py tests/test_replay.py -q` (3 passed), then `python -m engine.cli replay examples/replay.json` matched. The latest source at commit `9d34122` was also rebuilt and its example replay matched source/actual digest `9c034692…fd7eb0`. Disposable verification containers/volumes were removed afterward; the main local console remains running.
+[replay-validation.json](replay-validation.json) contains all 60 fresh world IDs, verdicts, matches, and durations. The median individual world duration was **1.686 seconds** on this host.
 
-The measured mixed workload has four actions (unrelated delivery + ordinary duplicate, target crash delivery + retry). Reduction produced two actions and reran all admissible single deletions; no remaining admissible deletion preserved the target property's violation for that logical operation. This is grammar-relative 1-minimality.
+## Remaining limits
 
-[replay-validation.json](replay-validation.json) retains all 60 run identifiers/verdicts and durations. Median individual world duration was **1.686 seconds** on this host. This is not a cloud speedup or a promised recording duration.
-
-## Failures found and repaired during development
-
-- Docker was initially stopped; starting it enabled the packaged checks. Dependency network access required the tool's approved network path.
-- Initial Vite dependency audit found an advisory. Vite was pinned to 6.4.3 and the subsequent install audit reported zero.
-- The first browser attempt overlapped API tests using the same storage. TestClient startup marked the live campaign interrupted. Tests now use isolated temporary storage, and the corrected browser suite passed. Interrupted lifecycle is shown explicitly.
-- An added independent ledger-opening check found WAL metadata in serialized snapshots. Export now backs up each provider database to a standalone file and switches that copy to DELETE journal mode. The final suite opens all archived ledgers and verifies their row counts.
-- A saved manifest from an older container build correctly returned `DIVERGED` when checked against a changed build. Current examples were regenerated after the final engine fixes; rebuilding the image includes them.
-
-## Remaining limitations and blockers
-
-CloudFormation lint and source review are not an AWS deployment. Approved account, region, budget and permission to provision are absent, so EC2 bootstrap, instance-role credential retrieval, live S3 conditional upload and a public URL remain unverified. Follow [infra/README.md](../infra/README.md) after approval.
-
-No YouTube upload or public repository push was performed. The [precise shot list](DEMO.md) is ready; recording status is documented there. The official submission form exposed only a loading state to the available web reader; no exact cutoff time was verified.
-
-Only one payment fixture and one bounded execution grammar are validated. No SQS, network-response suppression, concurrency, production repositories, unknown-bug discovery, global minimality or full-machine determinism claims are made.
+Only the `payment-v1` fixture and declared execution grammar are validated. The explorer does not cover concurrency, multiple crashes, network faults, or arbitrary repositories. Evidence consistency and deterministic replay are not proof of authorship or full-machine determinism. No cloud deployment, repository publication, video upload, or hackathon submission was performed.

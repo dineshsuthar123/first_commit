@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "fixtureId": "payment-v1",
-  "buildDigest": "9c0346924f64cad021088555bb56cc38a08d187a5a1022643c9db7d19cfd7eb0",
+  "buildDigest": "863b21915e95a16db8ad783e683fd9f7ba873ffdd061521bef2aa1394a0e4f41",
   "properties": {
     "no_duplicate_effect": 1,
     "correct_completion": 1,
@@ -242,7 +242,7 @@
       ]
     }
   ],
-  "externalOutcomes": [
+  "expectedOutcomes": [
     {
       "effectId": 1,
       "operationId": "capture-001",
@@ -260,5 +260,5 @@
       "idempotencyKey": null
     }
   ],
-  "checksum": "ae04deda7d619d183270133a319d8baa7a0af22cd63691f440ab3f0fdef17229"
+  "checksum": "9a6eb2e8aa76efda88a77cda5735cb7823f420d262645c5983dbcd40a82cab00"
 }
