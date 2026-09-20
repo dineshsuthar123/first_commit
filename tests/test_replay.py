@@ -2,6 +2,7 @@ import asyncio
 import copy
 import json
 import zipfile
+import sqlite3
 
 import pytest
 
@@ -34,6 +35,13 @@ def test_reduction_replay_and_evidence():
         checksums = json.loads(bundle.read("checksums.json"))
         assert all(sha(bundle.read(name)) == digest for name, digest in checksums.items())
         assert validate_manifest(json.loads(bundle.read("replay.json")))
+        for name in checksums:
+            if name.endswith("provider.sqlite"):
+                with sqlite3.connect(":memory:") as db:
+                    db.deserialize(bundle.read(name))
+                    rows = db.execute("SELECT COUNT(*) FROM captures").fetchone()[0]
+                    result = json.loads(bundle.read(name.replace("provider.sqlite", "result.json")))
+                    assert rows == len(result["observation"]["ledger"])
 
 
 def test_invalid_or_incompatible_manifest_never_passes():

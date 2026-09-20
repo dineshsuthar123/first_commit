@@ -78,8 +78,8 @@ async def run_case(plan: CasePlan, cancel=None, fixture=None):
         drains.append(asyncio.create_task(bounded_read(p.stderr, output)))
         return p
 
-    async def read(p):
-        deadline = time.monotonic() + BOUNDS["attemptTimeoutSeconds"]
+    async def read(p, deadline=None):
+        deadline = deadline or time.monotonic() + BOUNDS["attemptTimeoutSeconds"]
         task = asyncio.create_task(p.stdout.readline())
         try:
             while not task.done():
@@ -132,7 +132,7 @@ async def run_case(plan: CasePlan, cancel=None, fixture=None):
                 while True:
                     if time.monotonic() > deadline:
                         raise TimeoutError("attempt budget exceeded")
-                    e = await read(worker)
+                    e = await read(worker, deadline)
                     if e.get("operationId") != action.operationId or e.get("attempt") != action.attempt:
                         raise RuntimeError("protocol identity mismatch")
                     kind = e.pop("type")
@@ -154,7 +154,7 @@ async def run_case(plan: CasePlan, cancel=None, fixture=None):
                         worker.stdin.write(b'{"decision":"continue"}\n')
                         await worker.stdin.drain()
                     elif kind == "ack":
-                        await asyncio.wait_for(worker.wait(), 5)
+                        await asyncio.wait_for(worker.wait(), max(.01, min(5, deadline - time.monotonic())))
                         if worker.returncode != 0:
                             raise RuntimeError(f"worker exited after ack: {worker.returncode}")
                         break
@@ -184,6 +184,10 @@ async def run_case(plan: CasePlan, cancel=None, fixture=None):
         result["verdict"] = Verdict.ERROR
         result["diagnostics"].append(f"{type(e).__name__}: {e}")
     finally:
+        if result["verdict"] is None:
+            result["verdict"] = Verdict.INCONCLUSIVE
+            result["lifecycle"] = "INTERRUPTED"
+            result["diagnostics"].append("execution interrupted before evaluation")
         for process in reversed(processes):
             await stop(process)
         await asyncio.gather(*drains, return_exceptions=True)

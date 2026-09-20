@@ -19,7 +19,7 @@ class PaymentFixture:
     id = "payment-v1"
 
     def reset(self, schema):
-        with psycopg.connect(**db_config(), autocommit=True) as db:
+        with psycopg.connect(**db_config()) as db:
             db.execute(f'CREATE SCHEMA "{schema}"')
             db.execute(f'''CREATE TABLE "{schema}".payments (
                 operation_id TEXT PRIMARY KEY, order_id TEXT NOT NULL,

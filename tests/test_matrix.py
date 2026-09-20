@@ -10,7 +10,11 @@ from provider.server import charge, connect
 from tests.test_slice import plan
 from fixtures.payment import PaymentFixture
 import sys
+import os
+import subprocess
 from threading import Event
+from pathlib import Path
+from fixtures.payment import ROOT
 
 
 @pytest.mark.parametrize("variant,property_name", [("local_dedup", "no_duplicate_effect"),
@@ -68,3 +72,32 @@ def test_unexpected_exit_and_cancellation():
     cancelled = asyncio.run(run_case(plan(), cancel=cancel))
     assert cancelled["lifecycle"] == "CANCELLED"
     assert cancelled["verdict"] == Verdict.INCONCLUSIVE
+
+
+def test_breaking_stable_key_is_detected_without_changing_variant(tmp_path):
+    original = (ROOT / "worker/src/PaymentWorker.java").read_text()
+    broken = original.replace('"stateproof:payment:v1:" + op.get("operationId").getAsString()',
+                              '"stateproof:payment:v1:" + delivery.get("attemptId").getAsString()')
+    assert broken != original
+    source = tmp_path / "PaymentWorker.java"
+    source.write_text(broken)
+    javac = str(Path(os.environ["JAVA_HOME"]) / "bin/javac") if os.getenv("JAVA_HOME") else "javac"
+    subprocess.run([javac, "--release", "21", "-cp", str(ROOT / "worker/lib/*"), "-d", str(tmp_path), str(source)], check=True)
+    class MutatedStable(PaymentFixture):
+        def worker_command(self):
+            command = super().worker_command()
+            command[2] = os.pathsep.join([str(tmp_path), str(ROOT / "worker/lib/*")])
+            return command
+    case = asyncio.run(run_case(plan("stable_key", "after_external_call"), fixture=MutatedStable()))
+    assert case["plan"]["variant"] == "stable_key"
+    assert case["verdict"] == Verdict.VIOLATION
+    assert any(p["property"] == "no_duplicate_effect" and not p["passed"] for p in case["properties"])
+
+
+def test_protocol_timeout_is_inconclusive():
+    class SilentWorker(PaymentFixture):
+        def worker_command(self):
+            return [sys.executable, "-c", "import time;time.sleep(60)"]
+    result = asyncio.run(run_case(plan(), fixture=SilentWorker()))
+    assert result["verdict"] == Verdict.INCONCLUSIVE
+    assert any("deadline" in d for d in result["diagnostics"])

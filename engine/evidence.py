@@ -4,6 +4,8 @@ import io
 import json
 import os
 import sqlite3
+from contextlib import closing
+import tempfile
 from pathlib import Path
 from typing import Literal
 import zipfile
@@ -118,14 +120,25 @@ def export_bundle(campaign):
     cases = list(campaign["cases"])
     if campaign.get("reduction"):
         cases.append(campaign["reduction"]["case"])
+        for trial in campaign["reduction"]["trials"]:
+            if trial.get("worldId"):
+                trial_path = data_root() / "worlds" / trial["worldId"] / "result.json"
+                if trial_path.exists():
+                    cases.append(json.loads(trial_path.read_text(encoding="utf-8")))
     for case in cases:
         world = case["worldId"]
         members[f"worlds/{world}/result.json"] = encoded(case)
         ledger_path = data_root() / "worlds" / world / "provider.sqlite"
         if ledger_path.exists():
-            with sqlite3.connect(ledger_path) as source, sqlite3.connect(":memory:") as snapshot:
-                source.backup(snapshot)
-                members[f"worlds/{world}/provider.sqlite"] = snapshot.serialize()
+            # A standalone bundle must not require a WAL sidecar. Backup then switch
+            # the snapshot's journal mode, leaving the original evidence untouched.
+            with tempfile.TemporaryDirectory() as temporary:
+                snapshot_path = Path(temporary) / "provider.sqlite"
+                with closing(sqlite3.connect(ledger_path)) as source, closing(sqlite3.connect(snapshot_path)) as snapshot:
+                    source.backup(snapshot)
+                    snapshot.execute("PRAGMA journal_mode=DELETE")
+                    snapshot.commit()
+                members[f"worlds/{world}/provider.sqlite"] = snapshot_path.read_bytes()
     members["checksums.json"] = encoded({name: sha(content) for name, content in members.items()})
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as bundle:
@@ -145,7 +158,12 @@ def upload_bundle(path: Path, campaign_id):
     bucket = os.environ["EVIDENCE_BUCKET"]
     payload = path.read_bytes()
     digest = sha(payload)
-    key = f"evidence/{build_digest()}/{campaign_id}/{digest}.zip"
+    with zipfile.ZipFile(path) as bundle:
+        recorded = json.loads(bundle.read("campaign.json"))
+        if recorded["id"] != campaign_id or not recorded["cases"]:
+            raise ValueError("bundle must contain evidence for the requested campaign")
+        evidence_build = recorded["cases"][0]["buildDigest"]
+    key = f"evidence/{evidence_build}/{campaign_id}/{digest}.zip"
     s3 = boto3.client("s3")
     checksum = base64.b64encode(hashlib.sha256(payload).digest()).decode()
     try:
